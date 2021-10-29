@@ -4,15 +4,19 @@ import { styled, alpha } from '@mui/material/styles';
 import Grid from '@material-ui/core/Grid';
 import Box from '@mui/material/Box';
 import Table from '@mui/material/Table';
+import TextField from '@mui/material/TextField';
+import EditIcon from '@mui/icons-material/Edit';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
+import DoneIcon from '@mui/icons-material/Done';
 import TableHead from '@mui/material/TableHead';
 import TablePagination from '@mui/material/TablePagination';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
+import Input from '@mui/material/Input';
 import Paper from '@mui/material/Paper';
 import Checkbox from '@mui/material/Checkbox';
 import IconButton from '@mui/material/IconButton';
@@ -21,10 +25,12 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { visuallyHidden } from '@mui/utils';
-import { getProducts, addToSearchingText, getProductsOnSearch } from '../reducer/product';
+import { getProducts, addToSearchingText, getProductsOnSearch, updateProducts } from '../reducer/product';
 import {useSelector, useDispatch} from 'react-redux';
 import SearchIcon from '@mui/icons-material/Search';
 import InputBase from '@mui/material/InputBase';
+
+const ariaLabel = { 'aria-label': 'description' };
 
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
@@ -132,7 +138,7 @@ function EnhancedTableHead(props) {
   return (
     <TableHead>
       <TableRow>
-        <TableCell padding="checkbox">
+        {/* <TableCell padding="checkbox">
           <Checkbox
             color="primary"
             indeterminate={numSelected > 0 && numSelected < rowCount}
@@ -142,7 +148,7 @@ function EnhancedTableHead(props) {
               'aria-label': 'select all desserts',
             }}
           />
-        </TableCell>
+        </TableCell> */}
         {headCells.map((headCell) => (
           <TableCell
             key={headCell.id}
@@ -250,7 +256,10 @@ export default function EnhancedTable() {
   const [dense, setDense] = React.useState(false);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [searchedText, setSearchedText] = React.useState(searchingText);
-
+  const [clicked, setClicked] = React.useState("");
+  const [rowIndex, setRowIndex] = React.useState('');
+  const [asin, setAsin] = React.useState('');
+  const [flag, setFlag] = React.useState('');
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
@@ -307,14 +316,30 @@ export default function EnhancedTable() {
 
   const handleSearchedTextChange = event => {
     const value = event.target.value;
+    setPage(0);
     setSearchedText(value);
     dispatch(addToSearchingText(value));
     dispatch(getProductsOnSearch(value));
   }
+  const handleEdit = (e) => {
+    setClicked(e);
+    setRowIndex(e);
+  }
+  const handleDone = (index) => {
+    setClicked('');
+    console.log('Asin: ', asin);
+    const data = {
+      _id : index,
+      asin
+    }
+    dispatch(updateProducts(data));
+    setFlag('Okay');
+  }
   useEffect(() => {
       console.log('Rows per Page: ', rowsPerPage);
       dispatch(getProducts(rowsPerPage));
-  }, [dispatch, rowsPerPage])
+      setFlag('');
+  }, [dispatch, rowsPerPage, flag])
   return (
     <Grid container>
     <Grid item xs={2}>
@@ -357,7 +382,7 @@ export default function EnhancedTable() {
                       key={row.name}
                       selected={isItemSelected}
                     >
-                      <TableCell padding="checkbox">
+                      {/* <TableCell padding="checkbox">
                         <Checkbox
                           color="primary"
                           checked={isItemSelected}
@@ -365,7 +390,7 @@ export default function EnhancedTable() {
                             'aria-labelledby': labelId,
                           }}
                         />
-                      </TableCell>
+                      </TableCell> */}
                       <TableCell
                         component="th"
                         id={labelId}
@@ -374,8 +399,44 @@ export default function EnhancedTable() {
                       >
                         {row.name}
                       </TableCell>
-                      <TableCell align="right">{row.asin}</TableCell>
-                      <TableCell align="right">{row.origin}</TableCell>
+                      <TableCell align="right">
+                      {clicked===row._id?
+                        <>
+                              <IconButton onClick={() => handleDone(row._id)}>
+                                <DoneIcon></DoneIcon>
+                              </IconButton>
+                              <Input defaultValue={row.asin} id={`asin-${index}`} inputProps={ariaLabel} onChange={(e) => setAsin(e.target.value)}/>
+                           </>
+                      :<>
+                              <IconButton onClick={() => handleEdit(row._id)}>
+                                <EditIcon></EditIcon>
+                              </IconButton>
+                              <TextField id="outlined-basic" value={row.asin} variant="outlined" />
+                            </>}
+                       {/* {
+                         !clicked && (
+                           <>
+                              <IconButton >
+                                <EditIcon onClick={() => handleEdit(row._id)}></EditIcon>
+                              </IconButton>
+                              <TextField id="outlined-basic" value={row.asin} variant="outlined" />
+                            </>
+                         )
+                       }
+                       {
+                         (clicked && rowIndex == row._id) && (
+                           <>
+                              <IconButton>
+                                <DoneIcon></DoneIcon>
+                              </IconButton>
+                              <Input defaultValue={row.asin} id={`asin-${index}`} inputProps={ariaLabel} />
+                           </>
+                         )
+                         
+                       } */}
+                         
+                      </TableCell>
+                      <TableCell align="right"><Input defaultValue={row.origin} inputProps={ariaLabel} /></TableCell>
                       <TableCell align="right" size="medium">{row._id}</TableCell>
                     </TableRow>
                   );
