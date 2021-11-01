@@ -4,7 +4,6 @@ import { styled, alpha } from '@mui/material/styles';
 import Grid from '@material-ui/core/Grid';
 import Box from '@mui/material/Box';
 import Table from '@mui/material/Table';
-import TextField from '@mui/material/TextField';
 import EditIcon from '@mui/icons-material/Edit';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -25,7 +24,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { visuallyHidden } from '@mui/utils';
-import { getProducts, addToSearchingText, getProductsOnSearch, updateProducts } from '../reducer/product';
+import { getProducts, addToSearchingText, updateProducts, setThePagination, setTheFilter} from '../reducer/product';
 import {useSelector, useDispatch} from 'react-redux';
 import SearchIcon from '@mui/icons-material/Search';
 import InputBase from '@mui/material/InputBase';
@@ -138,7 +137,7 @@ function EnhancedTableHead(props) {
   return (
     <TableHead>
       <TableRow>
-        {/* <TableCell padding="checkbox">
+        <TableCell padding="checkbox">
           <Checkbox
             color="primary"
             indeterminate={numSelected > 0 && numSelected < rowCount}
@@ -148,7 +147,7 @@ function EnhancedTableHead(props) {
               'aria-label': 'select all desserts',
             }}
           />
-        </TableCell> */}
+        </TableCell>
         {headCells.map((headCell) => (
           <TableCell
             key={headCell.id}
@@ -185,7 +184,7 @@ EnhancedTableHead.propTypes = {
 };
 
 const EnhancedTableToolbar = (props) => {
-  const { numSelected, textValue, changeFunction } = props;
+  const { numSelected, changeFunction } = props;
 
   return (
     <Toolbar
@@ -246,7 +245,7 @@ EnhancedTableToolbar.propTypes = {
 };
 
 export default function EnhancedTable() {
-  const rows = useSelector(state => state.product.productList);
+  const { productList: rows, productCount} = useSelector(state => state.product);
   const {searchingText} = useSelector(state => state.product);
   const dispatch = useDispatch();
   const [order, setOrder] = React.useState('asc');
@@ -257,9 +256,10 @@ export default function EnhancedTable() {
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [searchedText, setSearchedText] = React.useState(searchingText);
   const [clicked, setClicked] = React.useState("");
-  const [rowIndex, setRowIndex] = React.useState('');
   const [asin, setAsin] = React.useState('');
   const [flag, setFlag] = React.useState('');
+  const [filter, setFilter] = React.useState(null);
+
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
@@ -297,11 +297,22 @@ export default function EnhancedTable() {
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
+    const pagination = {
+      page: page,
+      rowsPerPage: rowsPerPage
+    }
+    dispatch(setThePagination(pagination));
+    //dispatch(getProducts());
   };
 
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
+    const pagination = {
+      page: page,
+      rowsPerPage: rowsPerPage
+    }
+    dispatch(setThePagination(pagination));
   };
 
   const handleChangeDense = (event) => {
@@ -311,19 +322,31 @@ export default function EnhancedTable() {
   const isSelected = (name) => selected.indexOf(name) !== -1;
 
   // Avoid a layout jump when reaching the last page with empty rows.
-  const emptyRows =
-    page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
+  // const emptyRows =
+  //   page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
 
+  function isBlank(str) {
+      return (!str || /^\s*$/.test(str));
+  }
   const handleSearchedTextChange = event => {
-    const value = event.target.value;
-    setPage(0);
-    setSearchedText(value);
-    dispatch(addToSearchingText(value));
-    dispatch(getProductsOnSearch(value));
+    const text = event.target.value;
+    const isBlankOrNot = isBlank(text);
+    if(!isBlankOrNot){
+      const filters = {
+        field:'keyword',
+        value: text
+      }
+      setPage(0);
+      // setSearchedText(text);
+      setFilter(filters);
+      dispatch(setTheFilter(filters));
+      dispatch(addToSearchingText(text));
+      dispatch(getProducts(filters));
+    }
   }
   const handleEdit = (e) => {
     setClicked(e);
-    setRowIndex(e);
+    //setRowIndex(e);
   }
   const handleDone = (index) => {
     setClicked('');
@@ -336,10 +359,19 @@ export default function EnhancedTable() {
     setFlag('Okay');
   }
   useEffect(() => {
-      console.log('Rows per Page: ', rowsPerPage);
-      dispatch(getProducts(rowsPerPage));
+      const pagination = {
+        page: page,
+        rowsPerPage: rowsPerPage
+      }
+      dispatch(setThePagination(pagination));
+      const filter = {
+        field: '',
+        value: ''
+      }
+      dispatch(getProducts(filter));
       setFlag('');
-  }, [dispatch, rowsPerPage, flag])
+      console.log('Hello from useEffect');
+  }, [dispatch, rowsPerPage, flag, page])
   return (
     <Grid container>
     <Grid item xs={2}>
@@ -367,7 +399,6 @@ export default function EnhancedTable() {
               {/* if you don't need to support IE11, you can replace the `stableSort` call with:
                  rows.slice().sort(getComparator(order, orderBy)) */}
               {stableSort(rows, getComparator(order, orderBy))
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((row, index) => {
                   const isItemSelected = isSelected(row.name);
                   const labelId = `enhanced-table-checkbox-${index}`;
@@ -382,7 +413,7 @@ export default function EnhancedTable() {
                       key={row.name}
                       selected={isItemSelected}
                     >
-                      {/* <TableCell padding="checkbox">
+                      <TableCell padding="checkbox">
                         <Checkbox
                           color="primary"
                           checked={isItemSelected}
@@ -390,7 +421,7 @@ export default function EnhancedTable() {
                             'aria-labelledby': labelId,
                           }}
                         />
-                      </TableCell> */}
+                      </TableCell> 
                       <TableCell
                         component="th"
                         id={labelId}
@@ -411,7 +442,8 @@ export default function EnhancedTable() {
                               <IconButton onClick={() => handleEdit(row._id)}>
                                 <EditIcon></EditIcon>
                               </IconButton>
-                              <TextField id="outlined-basic" value={row.asin} variant="outlined" />
+                              {/* <TextField id="outlined-basic" value={row.asin} variant="outlined" /> */}
+                              {row.asin}
                             </>}
                        {/* {
                          !clicked && (
@@ -441,22 +473,13 @@ export default function EnhancedTable() {
                     </TableRow>
                   );
                 })}
-              {emptyRows > 0 && (
-                <TableRow
-                  style={{
-                    height: (dense ? 33 : 53) * emptyRows,
-                  }}
-                >
-                  <TableCell colSpan={6} />
-                </TableRow>
-              )}
             </TableBody>
           </Table>
         </TableContainer>
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={rows.length}
+          count={productCount}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
