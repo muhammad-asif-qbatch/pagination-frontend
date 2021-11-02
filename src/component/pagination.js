@@ -339,13 +339,22 @@ export default function EnhancedTable() {
         field:'keyword',
         value: text
       }
-      setPage(0);
       // setSearchedText(text);
       setFilter(filters);
+      setPage(0);
       dispatch(setTheFilter(filters));
       dispatch(addToSearchingText(text));
       dispatch(getProducts(filters));
     }
+    else{
+      const filters = {
+        field:'keyword',
+        value: text
+      }
+      dispatch(getProducts(filters));
+      dispatch(addToSearchingText(text));
+    }
+    
   }
   const handleEdit = (e) => {
     setClicked(e);
@@ -384,7 +393,7 @@ export default function EnhancedTable() {
     <Box sx={{ width: '100%' }}>
       <Paper sx={{ width: '100%', mb: 2 }}>
         <EnhancedTableToolbar numSelected={selected.length} textValue={searchedText} changeFunction={handleSearchedTextChange}/>
-        <TableContainer>
+        <TableContainer style={{height: '90vh'}}>
           <Table
             sx={{ minWidth: 750 }}
             aria-labelledby="tableTitle"
